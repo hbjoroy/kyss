@@ -512,6 +512,12 @@ main {
     font-weight: 600;
 }
 
+.aimed-time {
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.85em;
+}
+
 /* --- Save Section --- */
 .save-section {
     margin-top: 20px;
