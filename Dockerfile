@@ -42,8 +42,9 @@ FROM --platform=$BUILDPLATFORM docker.io/library/rust:1-bookworm AS bff-builder
 
 ARG TARGETARCH
 
-# Install zig + cargo-zigbuild (no gcc cross-linker needed)
-RUN apt-get update && apt-get install -y zig && rm -rf /var/lib/apt/lists/* \
+# Install zig (from official release) + cargo-zigbuild
+RUN curl -sSL https://ziglang.org/download/0.13.0/zig-linux-$(uname -m)-0.13.0.tar.xz | tar -xJ -C /usr/local \
+ && ln -s /usr/local/zig-linux-$(uname -m)-0.13.0/zig /usr/local/bin/zig \
  && cargo install cargo-zigbuild --locked
 
 RUN rustup target add aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu
