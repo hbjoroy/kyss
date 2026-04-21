@@ -124,9 +124,71 @@ impl std::fmt::Display for TransportMode {
 // --- Local storage wrapper ---
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimePeriod {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+    /// Start of period as "HH:MM"
+    pub start: String,
+    /// End of period as "HH:MM"
+    pub end: String,
+}
+
+impl TimePeriod {
+    pub fn defaults() -> Vec<TimePeriod> {
+        vec![
+            TimePeriod {
+                id: "morning".into(),
+                name: "Morgen".into(),
+                icon: "🌅".into(),
+                start: "06:30".into(),
+                end: "09:00".into(),
+            },
+            TimePeriod {
+                id: "mid-morning".into(),
+                name: "Formiddag".into(),
+                icon: "☀️".into(),
+                start: "09:00".into(),
+                end: "11:30".into(),
+            },
+            TimePeriod {
+                id: "lunch".into(),
+                name: "Lunsj".into(),
+                icon: "🍽️".into(),
+                start: "11:30".into(),
+                end: "13:00".into(),
+            },
+            TimePeriod {
+                id: "afternoon".into(),
+                name: "Ettermiddag".into(),
+                icon: "🌤️".into(),
+                start: "13:00".into(),
+                end: "15:30".into(),
+            },
+            TimePeriod {
+                id: "end-of-work".into(),
+                name: "Fra jobb".into(),
+                icon: "🏠".into(),
+                start: "15:00".into(),
+                end: "17:30".into(),
+            },
+            TimePeriod {
+                id: "evening".into(),
+                name: "Kveld".into(),
+                icon: "🌙".into(),
+                start: "18:00".into(),
+                end: "22:00".into(),
+            },
+        ]
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppData {
     pub version: u32,
     pub trip_types: Vec<TripType>,
+    #[serde(default = "TimePeriod::defaults")]
+    pub time_periods: Vec<TimePeriod>,
 }
 
 impl Default for AppData {
@@ -134,6 +196,7 @@ impl Default for AppData {
         Self {
             version: 1,
             trip_types: Vec::new(),
+            time_periods: TimePeriod::defaults(),
         }
     }
 }

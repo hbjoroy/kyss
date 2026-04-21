@@ -255,6 +255,93 @@ main {
     padding: 12px;
 }
 
+/* --- Time Picker --- */
+.time-picker {
+    margin-bottom: 12px;
+}
+
+.time-picker > label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.time-periods {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.period-chip {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.period-chip:hover {
+    border-color: var(--primary);
+    background: #e8f0fe;
+}
+
+.period-chip.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.time-adjust {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.time-input {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 1.1rem;
+    font-weight: 600;
+    outline: none;
+    width: 120px;
+    font-family: inherit;
+}
+
+.time-input:focus {
+    border-color: var(--primary);
+}
+
+.period-range {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background: var(--bg);
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
+.time-clear {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 50%;
+    transition: color 0.15s, background 0.15s;
+}
+
+.time-clear:hover {
+    color: var(--error);
+    background: #fce8e6;
+}
+
 /* --- Journey Results --- */
 .journey-results {
     display: flex;
