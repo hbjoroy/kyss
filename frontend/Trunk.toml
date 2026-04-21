@@ -7,4 +7,5 @@ address = "127.0.0.1"
 port = 8080
 
 [[proxy]]
-backend = "http://localhost:3001/api"
+rewrite = "/api/"
+backend = "http://localhost:3001/api/"

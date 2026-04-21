@@ -4,7 +4,7 @@ mod routes;
 use axum::Router;
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
-use tracing_subscriber;
+use tower_http::services::{ServeDir, ServeFile};
 
 #[tokio::main]
 async fn main() {
@@ -19,9 +19,13 @@ async fn main() {
 
     let api_routes = routes::api_router(entur_client);
 
-    // In production, serve frontend static files from dist/
+    // Serve frontend static files from dist/ with SPA fallback
+    let frontend = ServeDir::new("../frontend/dist")
+        .not_found_service(ServeFile::new("../frontend/dist/index.html"));
+
     let app = Router::new()
         .nest("/api", api_routes)
+        .fallback_service(frontend)
         .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3001));

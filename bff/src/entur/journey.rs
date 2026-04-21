@@ -38,8 +38,10 @@ query Trip($from: Location!, $to: Location!, $dateTime: DateTime, $numTripPatter
           publicCode
           name
         }
-        destinationDisplay {
-          frontText
+        fromEstimatedCall {
+          destinationDisplay {
+            frontText
+          }
         }
       }
     }
@@ -112,6 +114,12 @@ struct RawLeg {
     aimed_start_time: Option<String>,
     aimed_end_time: Option<String>,
     line: Option<RawLine>,
+    from_estimated_call: Option<RawEstimatedCall>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawEstimatedCall {
     destination_display: Option<RawDestination>,
 }
 
@@ -218,7 +226,9 @@ impl EnturClient {
                             public_code: l.public_code,
                             name: l.name,
                         }),
-                        destination: leg.destination_display.map(|d| d.front_text),
+                        destination: leg.from_estimated_call
+                            .and_then(|ec| ec.destination_display)
+                            .map(|d| d.front_text),
                     })
                     .collect(),
             })
