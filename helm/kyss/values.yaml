@@ -1,0 +1,16 @@
+global:
+  imageRegistry: ""   # e.g. oci.example.com/kyss
+  imageTag: ""        # defaults to Chart.appVersion
+  imagePullPolicy: IfNotPresent
+
+kyss:
+  replicaCount: 1
+  image: kyss
+  port: 8080
+  resources:
+    requests:
+      memory: "32Mi"
+      cpu: "25m"
+    limits:
+      memory: "128Mi"
+      cpu: "250m"

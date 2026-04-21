@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-kyss
+  labels:
+    {{- include "kyss.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.kyss.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kyss.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kyss.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: kyss
+          image: {{ include "kyss.image" . }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.kyss.port }}
+          env:
+            - name: LISTEN_PORT
+              value: {{ .Values.kyss.port | quote }}
+            - name: FRONTEND_DIST_DIR
+              value: "/app/dist"
+            - name: RUST_LOG
+              value: "info"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.kyss.port }}
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.kyss.port }}
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.kyss.resources | nindent 12 }}

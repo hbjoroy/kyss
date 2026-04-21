@@ -1,0 +1,5 @@
+apiVersion: v2
+name: kyss
+description: Kyss — Norwegian transit schedule app (Rust WASM + Axum BFF)
+version: 0.1.0
+appVersion: "0.1.0"

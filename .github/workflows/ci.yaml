@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+
+  build-image:
+    needs: version
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: false
+          tags: kyss:${{ needs.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Push to OCI registry
+        if: github.ref == 'refs/heads/master'
+        env:
+          OCI_USERNAME: ${{ secrets.OCI_USERNAME }}
+          OCI_PASSWORD: ${{ secrets.OCI_PASSWORD }}
+          OCI_REGISTRY: ${{ secrets.OCI_REGISTRY }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          if [ -z "$OCI_REGISTRY" ]; then
+            echo "OCI_REGISTRY not set, skipping push"
+            exit 0
+          fi
+          echo "$OCI_PASSWORD" | docker login "$OCI_REGISTRY" -u "$OCI_USERNAME" --password-stdin
+          docker buildx build \
+            --platform linux/arm64 \
+            --push \
+            -t "$OCI_REGISTRY/kyss/kyss:$VERSION" \
+            -t "$OCI_REGISTRY/kyss/kyss:latest" \
+            .
+
+  push-chart:
+    needs: [version, build-image]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update chart version
+        run: |
+          VERSION=${{ needs.version.outputs.version }}
+          sed -i "s/^version:.*/version: $VERSION/" helm/kyss/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" helm/kyss/Chart.yaml
+
+      - name: Push Helm chart to OCI registry
+        env:
+          OCI_USERNAME: ${{ secrets.OCI_USERNAME }}
+          OCI_PASSWORD: ${{ secrets.OCI_PASSWORD }}
+          OCI_REGISTRY: ${{ secrets.OCI_REGISTRY }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          if [ -z "$OCI_REGISTRY" ]; then
+            echo "OCI_REGISTRY not set, skipping push"
+            exit 0
+          fi
+          echo "$OCI_PASSWORD" | helm registry login "$OCI_REGISTRY" -u "$OCI_USERNAME" --password-stdin
+          helm package helm/kyss
+          helm push kyss-$VERSION.tgz oci://$OCI_REGISTRY/kyss
