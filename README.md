@@ -2,6 +2,8 @@
 
 A bus/transit schedule app for finding your next journey in Norway, built with Rust.
 
+> **🤖 AI-assisted development**: This project was developed with the assistance of AI (GitHub Copilot). Code, architecture, and documentation were co-authored by a human and an AI pair programmer.
+
 ## Architecture
 
 - **Frontend**: Leptos 0.8 (Rust → WASM, client-side rendering)
@@ -11,12 +13,25 @@ A bus/transit schedule app for finding your next journey in Norway, built with R
 
 ## Features
 
-- 🔍 Search stops with autocomplete (EnTur Geocoder)
-- 🚆 Journey planning between stops (EnTur Journey Planner)
+- 🔍 Search stops with autocomplete
+- 🚆 Journey planning between stops with real-time data
+- ⏰ Smart time period picker (morning, afternoon, evening, etc.)
+- 🔄 Configurable minimum transfer gap between connections
 - 💾 Save frequent searches as "Trip Types" (e.g., To work, From work)
 - 🎨 Clean, responsive, mobile-first UI
 - ⏱️ Real-time delay indicators
 - 📦 All user data in localStorage
+
+## EnTur API Dependency
+
+This application depends on the free public APIs provided by [EnTur](https://developer.entur.org/):
+
+- **[Geocoder API](https://developer.entur.org/pages-geocoder-api)**: Stop search and autocomplete
+- **[Journey Planner API](https://developer.entur.org/pages-journeyplanner-journeyplanner)**: GraphQL-based trip planning with real-time data
+
+All API requests include the `ET-Client-Name: kyss-app` header as required by EnTur's terms of use. The APIs are free and open, but rate-limited. No API key is required.
+
+EnTur is the national registry for public transport data in Norway. Their APIs provide access to schedules, real-time data, and stop information for all public transport operators in Norway.
 
 ## Prerequisites
 
@@ -65,10 +80,6 @@ kyss/
 │       └── storage.rs   # localStorage persistence
 ```
 
-## EnTur APIs
+## License
 
-Uses free public APIs from [EnTur](https://developer.entur.org/):
-- **Geocoder**: Stop search/autocomplete
-- **Journey Planner**: GraphQL trip planning
-
-All requests include `ET-Client-Name: kyss-app` header as required.
+MIT
