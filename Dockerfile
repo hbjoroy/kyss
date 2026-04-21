@@ -36,7 +36,8 @@ COPY frontend/index.html frontend/
 COPY frontend/Trunk.toml frontend/
 COPY frontend/style frontend/style
 
-RUN cd frontend && trunk build --release
+RUN touch shared/src/lib.rs && find frontend/src -name '*.rs' -exec touch {} + \
+ && cd frontend && trunk build --release
 
 # ── Stage 2: build BFF binary (cross-compile via zigbuild) ──────
 FROM --platform=$BUILDPLATFORM docker.io/library/rust:1.95-bookworm AS bff-builder
