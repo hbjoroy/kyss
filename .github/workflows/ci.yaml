@@ -48,8 +48,8 @@ jobs:
           platforms: linux/arm64
           push: ${{ github.ref == 'refs/heads/master' && secrets.OCI_REGISTRY != '' }}
           tags: |
-            ${{ secrets.OCI_REGISTRY }}/kyss/kyss:${{ needs.version.outputs.version }}
-            ${{ secrets.OCI_REGISTRY }}/kyss/kyss:latest
+            ${{ secrets.OCI_REGISTRY }}/kyss/app:${{ needs.version.outputs.version }}
+            ${{ secrets.OCI_REGISTRY }}/kyss/app:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

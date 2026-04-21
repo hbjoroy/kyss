@@ -5,7 +5,7 @@ global:
 
 kyss:
   replicaCount: 1
-  image: kyss
+  image: app
   port: 8080
   resources:
     requests:
