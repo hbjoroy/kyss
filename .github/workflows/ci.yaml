@@ -17,7 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: version
-        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+        run: |
+          BASE=$(cat VERSION)
+          echo "version=${BASE}.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
   build-image:
     needs: version
