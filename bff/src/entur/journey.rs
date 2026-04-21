@@ -6,12 +6,13 @@ const JOURNEY_PLANNER_URL: &str = "https://api.entur.io/journey-planner/v3/graph
 
 /// GraphQL query for trip planning
 const TRIP_QUERY: &str = r#"
-query Trip($from: Location!, $to: Location!, $dateTime: DateTime, $numTripPatterns: Int) {
+query Trip($from: Location!, $to: Location!, $dateTime: DateTime, $numTripPatterns: Int, $transferSlack: Int) {
   trip(
     from: $from
     to: $to
     dateTime: $dateTime
     numTripPatterns: $numTripPatterns
+    transferSlack: $transferSlack
   ) {
     tripPatterns {
       startTime
@@ -63,6 +64,8 @@ struct TripVariables {
     date_time: Option<String>,
     #[serde(rename = "numTripPatterns", skip_serializing_if = "Option::is_none")]
     num_trip_patterns: Option<u32>,
+    #[serde(rename = "transferSlack", skip_serializing_if = "Option::is_none")]
+    transfer_slack: Option<u32>,
 }
 
 #[derive(Serialize)]
@@ -165,6 +168,7 @@ impl EnturClient {
         to_id: &str,
         date_time: Option<String>,
         num_results: Option<u32>,
+        min_transfer_minutes: Option<u32>,
     ) -> Result<JourneyResult, String> {
         let request = GraphQLRequest {
             query: TRIP_QUERY,
@@ -173,6 +177,7 @@ impl EnturClient {
                 to: LocationInput { place: to_id.to_string() },
                 date_time,
                 num_trip_patterns: num_results.or(Some(5)),
+                transfer_slack: min_transfer_minutes.map(|m| m * 60),
             },
         };
 

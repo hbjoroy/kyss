@@ -12,7 +12,7 @@ async fn plan_journey(
     Json(req): Json<JourneyRequest>,
 ) -> Result<Json<JourneyResult>, String> {
     let result = entur
-        .plan_journey(&req.from, &req.to, req.date_time, req.num_results)
+        .plan_journey(&req.from, &req.to, req.date_time, req.num_results, req.min_transfer_minutes)
         .await?;
     Ok(Json(result))
 }

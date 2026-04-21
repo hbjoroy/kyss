@@ -45,6 +45,9 @@ pub struct JourneyRequest {
     pub date_time: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub num_results: Option<u32>,
+    /// Minimum transfer gap in minutes (sent as transferSlack in seconds to EnTur)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_transfer_minutes: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -183,12 +186,20 @@ impl TimePeriod {
     }
 }
 
+pub const DEFAULT_MIN_TRANSFER_MINUTES: u32 = 5;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppData {
     pub version: u32,
     pub trip_types: Vec<TripType>,
     #[serde(default = "TimePeriod::defaults")]
     pub time_periods: Vec<TimePeriod>,
+    #[serde(default = "default_min_transfer")]
+    pub min_transfer_minutes: u32,
+}
+
+fn default_min_transfer() -> u32 {
+    DEFAULT_MIN_TRANSFER_MINUTES
 }
 
 impl Default for AppData {
@@ -197,6 +208,7 @@ impl Default for AppData {
             version: 1,
             trip_types: Vec::new(),
             time_periods: TimePeriod::defaults(),
+            min_transfer_minutes: DEFAULT_MIN_TRANSFER_MINUTES,
         }
     }
 }

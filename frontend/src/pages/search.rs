@@ -36,6 +36,8 @@ pub fn SearchPage() -> impl IntoView {
     } else { None });
 
     let selected_time = RwSignal::new(Option::<String>::None);
+    let app_data = expect_context::<crate::storage::AppDataSignal>();
+    let min_transfer = RwSignal::new(app_data.data.get_untracked().min_transfer_minutes);
     let results = RwSignal::new(Option::<JourneyResult>::None);
     let loading = RwSignal::new(false);
     let error = RwSignal::new(Option::<String>::None);
@@ -46,12 +48,13 @@ pub fn SearchPage() -> impl IntoView {
         let from = from_stop.get_untracked();
         let to = to_stop.get_untracked();
         let time = selected_time.get_untracked();
+        let transfer_mins = min_transfer.get_untracked();
         if let (Some(from), Some(to)) = (from, to) {
             loading.set(true);
             error.set(None);
             results.set(None);
             spawn_local(async move {
-                match fetch_journey(&from.id, &to.id, time.as_deref()).await {
+                match fetch_journey(&from.id, &to.id, time.as_deref(), Some(transfer_mins)).await {
                     Ok(result) => results.set(Some(result)),
                     Err(e) => error.set(Some(e)),
                 }
@@ -74,6 +77,7 @@ pub fn SearchPage() -> impl IntoView {
                 <StopSearch label="Fra" on_select=on_from_select initial_value=initial_from_name />
                 <StopSearch label="Til" on_select=on_to_select initial_value=initial_to_name />
                 <TimePicker selected_time=selected_time />
+                <TransferGap min_transfer=min_transfer />
                 <button
                     class="btn btn-primary search-btn"
                     on:click=search_click
@@ -180,11 +184,43 @@ fn SaveTripTypeSection(
     }
 }
 
-async fn fetch_journey(from_id: &str, to_id: &str, date_time: Option<&str>) -> Result<JourneyResult, String> {
+#[component]
+fn TransferGap(min_transfer: RwSignal<u32>) -> impl IntoView {
+    let app_data = expect_context::<crate::storage::AppDataSignal>();
+
+    let on_change = move |ev: web_sys::Event| {
+        let target = ev.target().unwrap();
+        let input: web_sys::HtmlInputElement = target.dyn_into().unwrap();
+        if let Ok(val) = input.value().parse::<u32>() {
+            min_transfer.set(val);
+            app_data.data.update(|d| d.min_transfer_minutes = val);
+        }
+    };
+
+    view! {
+        <div class="transfer-gap">
+            <label>"Minimum byttetid"</label>
+            <div class="transfer-gap-control">
+                <input
+                    type="range"
+                    min="0"
+                    max="20"
+                    step="1"
+                    prop:value=min_transfer
+                    on:input=on_change
+                />
+                <span class="transfer-gap-value">{move || format!("{} min", min_transfer.get())}</span>
+            </div>
+        </div>
+    }
+}
+
+async fn fetch_journey(from_id: &str, to_id: &str, date_time: Option<&str>, min_transfer_minutes: Option<u32>) -> Result<JourneyResult, String> {
     let window = web_sys::window().unwrap();
     let body = serde_json::to_string(&JourneyRequest {
         from: from_id.to_string(), to: to_id.to_string(),
         date_time: date_time.map(|s| s.to_string()), num_results: Some(5),
+        min_transfer_minutes,
     }).map_err(|e| format!("{}", e))?;
 
     let opts = web_sys::RequestInit::new();

@@ -342,6 +342,53 @@ main {
     background: #fce8e6;
 }
 
+/* --- Transfer Gap --- */
+.transfer-gap {
+    margin-bottom: 12px;
+}
+
+.transfer-gap > label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.transfer-gap-control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.transfer-gap-control input[type="range"] {
+    flex: 1;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--border);
+    border-radius: 3px;
+    outline: none;
+}
+
+.transfer-gap-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+}
+
+.transfer-gap-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 52px;
+    text-align: right;
+}
+
 /* --- Journey Results --- */
 .journey-results {
     display: flex;
