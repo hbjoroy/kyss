@@ -59,6 +59,8 @@ fn LegView(leg: Leg) -> impl IntoView {
 
     let delayed_start = is_delayed(&leg.aimed_start, &leg.expected_start);
     let delayed_end = is_delayed(&leg.aimed_end, &leg.expected_end);
+    let realtime_start = leg.aimed_start.is_some();
+    let realtime_end = leg.aimed_end.is_some();
 
     let aimed_start_str = if delayed_start {
         leg.aimed_start.as_ref().map(|t| format!("({})", format_time(t)))
@@ -83,13 +85,13 @@ fn LegView(leg: Leg) -> impl IntoView {
                 <div class="leg-line">{line_info}</div>
                 <div class="leg-stops">
                     <span class="leg-from">
-                        <span class:delayed=delayed_start>{time_start}</span>
+                        <span class:delayed=delayed_start class:realtime=realtime_start>{time_start}</span>
                         {aimed_start_str.map(|s| view! { <span class="aimed-time">" "{s}</span> })}
                         " "{from_name}
                     </span>
                     <span class="leg-arrow">" → "</span>
                     <span class="leg-to">
-                        <span class:delayed=delayed_end>{time_end}</span>
+                        <span class:delayed=delayed_end class:realtime=realtime_end>{time_end}</span>
                         {aimed_end_str.map(|s| view! { <span class="aimed-time">" "{s}</span> })}
                         " "{to_name}
                     </span>

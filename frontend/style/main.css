@@ -507,6 +507,10 @@ main {
     color: var(--text-secondary);
 }
 
+.realtime {
+    font-weight: 600;
+}
+
 .delayed {
     color: var(--delayed);
     font-weight: 600;

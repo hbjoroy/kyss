@@ -1,0 +1,17 @@
+{
+  "name": "Kyss",
+  "short_name": "Kyss",
+  "description": "Finn din neste reise",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#1a73e8",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
