@@ -1,7 +1,7 @@
 use kyss_shared::{JourneyRequest, JourneyResult, Stop};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use leptos_router::hooks::{use_navigate, use_query_map};
+use leptos_router::hooks::use_query_map;
 use wasm_bindgen::JsCast;
 
 use crate::components::journey_results::JourneyResults;
@@ -47,6 +47,9 @@ pub fn SearchPage() -> impl IntoView {
         })
     } else { None });
 
+    let from_display = RwSignal::new(initial_from_name);
+    let to_display = RwSignal::new(initial_to_name);
+
     let selected_time = RwSignal::new(Option::<String>::None);
     let app_data = expect_context::<crate::storage::AppDataSignal>();
     let min_transfer = RwSignal::new(app_data.data.get_untracked().min_transfer_minutes);
@@ -79,45 +82,44 @@ pub fn SearchPage() -> impl IntoView {
 
     let search_click = move |_| { do_search(); };
 
-    let on_from_select = Callback::new(move |stop: Stop| { from_stop.set(Some(stop)); });
-    let on_to_select = Callback::new(move |stop: Stop| { to_stop.set(Some(stop)); });
+    let on_from_select = Callback::new(move |stop: Stop| {
+        from_display.set(stop.name.clone());
+        from_stop.set(Some(stop));
+    });
+    let on_to_select = Callback::new(move |stop: Stop| {
+        to_display.set(stop.name.clone());
+        to_stop.set(Some(stop));
+    });
     let can_search = move || from_stop.get().is_some() && to_stop.get().is_some();
 
-    let navigate = use_navigate();
-    let swap_stops = {
-        let trip_type_id = trip_type_id.clone();
-        move |_| {
-            let from = from_stop.get_untracked();
-            let to = to_stop.get_untracked();
-            if let (Some(f), Some(t)) = (from, to) {
-                let mut url = format!(
-                    "/search?from={}&to={}&from_name={}&to_name={}",
-                    urlencoding::encode(&t.id),
-                    urlencoding::encode(&f.id),
-                    urlencoding::encode(&t.name),
-                    urlencoding::encode(&f.name),
-                );
-                if !trip_type_id.is_empty() {
-                    url.push_str(&format!("&trip_type_id={}", urlencoding::encode(&trip_type_id)));
-                }
-                navigate(&url, Default::default());
-            }
-        }
+    let swap_stops = move |_| {
+        let from = from_stop.get_untracked();
+        let to = to_stop.get_untracked();
+        from_stop.set(to.clone());
+        to_stop.set(from.clone());
+        let fd = from_display.get_untracked();
+        let td = to_display.get_untracked();
+        from_display.set(td);
+        to_display.set(fd);
     };
 
     view! {
         <div class="search-page">
             <div class="search-form">
-                <StopSearch label="Fra" on_select=on_from_select initial_value=initial_from_name />
-                <button
-                    class="swap-btn"
-                    on:click=swap_stops
-                    disabled=move || from_stop.get().is_none() || to_stop.get().is_none()
-                    title="Bytt fra og til"
-                >
-                    "⇅"
-                </button>
-                <StopSearch label="Til" on_select=on_to_select initial_value=initial_to_name />
+                <div class="stop-fields">
+                    <div class="stop-fields-inputs">
+                        <StopSearch label="Fra" on_select=on_from_select display_value=from_display />
+                        <StopSearch label="Til" on_select=on_to_select display_value=to_display />
+                    </div>
+                    <button
+                        class="swap-btn"
+                        on:click=swap_stops
+                        disabled=move || from_stop.get().is_none() || to_stop.get().is_none()
+                        title="Bytt fra og til"
+                    >
+                        "⇅"
+                    </button>
+                </div>
                 <TimePicker selected_time=selected_time />
                 <TransferGap min_transfer=min_transfer />
                 <button

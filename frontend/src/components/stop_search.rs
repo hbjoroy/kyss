@@ -9,9 +9,9 @@ const API_BASE: &str = "/api";
 pub fn StopSearch(
     #[prop(into)] label: String,
     on_select: Callback<Stop>,
-    #[prop(optional, into)] initial_value: String,
+    display_value: RwSignal<String>,
 ) -> impl IntoView {
-    let input_value = RwSignal::new(initial_value);
+    let input_value = display_value;
     let suggestions = RwSignal::new(Vec::<Stop>::new());
     let show_suggestions = RwSignal::new(false);
     let debounce_handle = RwSignal::new(Option::<i32>::None);

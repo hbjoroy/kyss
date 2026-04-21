@@ -36,8 +36,17 @@ pub fn TripTypeNewPage() -> impl IntoView {
         }
     };
 
-    let on_from = Callback::new(move |stop: Stop| from_stop.set(Some(stop)));
-    let on_to = Callback::new(move |stop: Stop| to_stop.set(Some(stop)));
+    let from_display = RwSignal::new(String::new());
+    let to_display = RwSignal::new(String::new());
+
+    let on_from = Callback::new(move |stop: Stop| {
+        from_display.set(stop.name.clone());
+        from_stop.set(Some(stop));
+    });
+    let on_to = Callback::new(move |stop: Stop| {
+        to_display.set(stop.name.clone());
+        to_stop.set(Some(stop));
+    });
 
     view! {
         <div class="trip-type-page">
@@ -73,8 +82,8 @@ pub fn TripTypeNewPage() -> impl IntoView {
                     }).collect_view()}
                 </div>
             </div>
-            <StopSearch label="Fra" on_select=on_from initial_value="" />
-            <StopSearch label="Til" on_select=on_to initial_value="" />
+            <StopSearch label="Fra" on_select=on_from display_value=from_display />
+            <StopSearch label="Til" on_select=on_to display_value=to_display />
             <div class="form-actions">
                 <button class="btn btn-primary" on:click=save>"Lagre"</button>
                 <a href="/" class="btn btn-secondary">"Avbryt"</a>

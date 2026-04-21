@@ -249,23 +249,36 @@ main {
     margin-bottom: 20px;
 }
 
+.stop-fields {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.stop-fields-inputs {
+    flex: 1;
+    min-width: 0;
+}
+
 .swap-btn {
-    display: block;
-    margin: -4px auto 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
     background: none;
     border: 1px solid var(--border);
     border-radius: 50%;
     width: 36px;
     height: 36px;
+    min-width: 36px;
     font-size: 1.2rem;
     cursor: pointer;
     color: var(--primary);
-    transition: background 0.15s, transform 0.15s;
+    transition: background 0.15s;
 }
 
 .swap-btn:hover:not(:disabled) {
     background: var(--bg);
-    transform: rotate(180deg);
 }
 
 .swap-btn:disabled {
