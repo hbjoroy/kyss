@@ -35,6 +35,7 @@ COPY frontend/src frontend/src
 COPY frontend/index.html frontend/
 COPY frontend/Trunk.toml frontend/
 COPY frontend/style frontend/style
+COPY frontend/public frontend/public
 
 RUN touch shared/src/lib.rs && find frontend/src -name '*.rs' -exec touch {} + \
  && cd frontend && trunk build --release
