@@ -12,7 +12,8 @@
 FROM --platform=$BUILDPLATFORM docker.io/library/rust:1-bookworm AS frontend-builder
 
 RUN rustup target add wasm32-unknown-unknown \
- && cargo install trunk --locked
+ && curl -sSL https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz | tar -xz -C /usr/local/bin \
+ && cargo binstall --no-confirm trunk
 
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
@@ -42,10 +43,11 @@ FROM --platform=$BUILDPLATFORM docker.io/library/rust:1-bookworm AS bff-builder
 
 ARG TARGETARCH
 
-# Install zig (from official release) + cargo-zigbuild
+# Install zig (from official release) + cargo-zigbuild (pre-built binary)
 RUN curl -sSL https://ziglang.org/download/0.13.0/zig-linux-$(uname -m)-0.13.0.tar.xz | tar -xJ -C /usr/local \
  && ln -s /usr/local/zig-linux-$(uname -m)-0.13.0/zig /usr/local/bin/zig \
- && cargo install cargo-zigbuild --locked
+ && curl -sSL https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz | tar -xz -C /usr/local/bin \
+ && cargo binstall --no-confirm cargo-zigbuild
 
 RUN rustup target add aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu
 
