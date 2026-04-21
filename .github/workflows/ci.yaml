@@ -28,25 +28,34 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      - uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
-      - name: Build image
+      - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/arm64
-          push: false
-          tags: kyss:${{ needs.version.outputs.version }}
+          push: ${{ github.ref == 'refs/heads/master' && secrets.OCI_REGISTRY != '' }}
+          tags: |
+            ${{ secrets.OCI_REGISTRY }}/kyss/kyss:${{ needs.version.outputs.version }}
+            ${{ secrets.OCI_REGISTRY }}/kyss/kyss:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Push to OCI registry
+      - name: Login to OCI registry
         if: github.ref == 'refs/heads/master'
         env:
           OCI_USERNAME: ${{ secrets.OCI_USERNAME }}
           OCI_PASSWORD: ${{ secrets.OCI_PASSWORD }}
+          OCI_REGISTRY: ${{ secrets.OCI_REGISTRY }}
+        run: |
+          if [ -z "$OCI_REGISTRY" ]; then
+            echo "OCI_REGISTRY not set, skipping"
+            exit 0
+          fi
+          echo "$OCI_PASSWORD" | docker login "$OCI_REGISTRY" -u "$OCI_USERNAME" --password-stdin
+
+      - name: Push image via skopeo
+        if: github.ref == 'refs/heads/master'
+        env:
           OCI_REGISTRY: ${{ secrets.OCI_REGISTRY }}
           VERSION: ${{ needs.version.outputs.version }}
         run: |
@@ -54,13 +63,13 @@ jobs:
             echo "OCI_REGISTRY not set, skipping push"
             exit 0
           fi
-          echo "$OCI_PASSWORD" | docker login "$OCI_REGISTRY" -u "$OCI_USERNAME" --password-stdin
-          docker buildx build \
-            --platform linux/arm64 \
-            --push \
-            -t "$OCI_REGISTRY/kyss/kyss:$VERSION" \
-            -t "$OCI_REGISTRY/kyss/kyss:latest" \
-            .
+          sudo apt-get update && sudo apt-get install -y skopeo
+          skopeo copy \
+            docker-daemon:$OCI_REGISTRY/kyss/kyss:$VERSION \
+            docker://$OCI_REGISTRY/kyss/kyss:$VERSION
+          skopeo copy \
+            docker-daemon:$OCI_REGISTRY/kyss/kyss:latest \
+            docker://$OCI_REGISTRY/kyss/kyss:latest
 
   push-chart:
     needs: [version, build-image]

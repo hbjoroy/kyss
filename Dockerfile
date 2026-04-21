@@ -1,8 +1,9 @@
 # ─────────────────────────────────────────────────────────────────
 # Multi-stage Dockerfile for Kyss (BFF + WASM frontend).
 #
-# Cross-compiles on the build platform — no QEMU emulation.
-# Currently targets arm64 only; add amd64 via TARGETARCH later.
+# Cross-compiles natively using cargo-zigbuild — no QEMU.
+# The build stages always run on the host platform; only the
+# final runtime image is the target arch.
 #
 # Build context: repo root
 # ─────────────────────────────────────────────────────────────────
@@ -36,20 +37,16 @@ COPY frontend/style frontend/style
 
 RUN cd frontend && trunk build --release
 
-# ── Stage 2: build BFF binary (cross-compile for target arch) ───
+# ── Stage 2: build BFF binary (cross-compile via zigbuild) ──────
 FROM --platform=$BUILDPLATFORM docker.io/library/rust:1-bookworm AS bff-builder
 
 ARG TARGETARCH
 
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-      apt-get update && apt-get install -y gcc-aarch64-linux-gnu && rm -rf /var/lib/apt/lists/*; \
-    elif [ "$TARGETARCH" = "amd64" ]; then \
-      apt-get update && apt-get install -y gcc-x86-64-linux-gnu && rm -rf /var/lib/apt/lists/*; \
-    fi
+# Install zig + cargo-zigbuild (no gcc cross-linker needed)
+RUN apt-get update && apt-get install -y zig && rm -rf /var/lib/apt/lists/* \
+ && cargo install cargo-zigbuild --locked
 
 RUN rustup target add aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu
-ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
 
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
@@ -65,9 +62,9 @@ RUN mkdir -p shared/src && echo "" > shared/src/lib.rs \
  && mkdir -p frontend/src && echo "fn main(){}" > frontend/src/main.rs
 
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
-      cargo build --release --target aarch64-unknown-linux-gnu -p kyss-bff 2>&1 || true; \
+      cargo zigbuild --release --target aarch64-unknown-linux-gnu -p kyss-bff 2>&1 || true; \
     else \
-      cargo build --release --target x86_64-unknown-linux-gnu -p kyss-bff 2>&1 || true; \
+      cargo zigbuild --release --target x86_64-unknown-linux-gnu -p kyss-bff 2>&1 || true; \
     fi
 
 # Copy real sources and build BFF
@@ -76,10 +73,10 @@ COPY bff/src bff/src
 
 RUN touch shared/src/lib.rs && find bff/src -name '*.rs' -exec touch {} + \
  && if [ "$TARGETARCH" = "arm64" ]; then \
-      cargo build --release --target aarch64-unknown-linux-gnu -p kyss-bff \
+      cargo zigbuild --release --target aarch64-unknown-linux-gnu -p kyss-bff \
       && cp target/aarch64-unknown-linux-gnu/release/kyss-bff /binary; \
     else \
-      cargo build --release --target x86_64-unknown-linux-gnu -p kyss-bff \
+      cargo zigbuild --release --target x86_64-unknown-linux-gnu -p kyss-bff \
       && cp target/x86_64-unknown-linux-gnu/release/kyss-bff /binary; \
     fi
 
@@ -87,7 +84,7 @@ RUN touch shared/src/lib.rs && find bff/src -name '*.rs' -exec touch {} + \
 FROM --platform=$BUILDPLATFORM docker.io/library/debian:bookworm-slim AS certs
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# ── Stage 4: minimal runtime image ──────────────────────────────
+# ── Stage 4: minimal runtime image (target arch) ────────────────
 FROM docker.io/library/debian:bookworm-slim
 
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
