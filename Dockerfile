@@ -9,11 +9,11 @@
 # ─────────────────────────────────────────────────────────────────
 
 # ── Stage 1: build frontend WASM (runs on build platform) ───────
-FROM --platform=$BUILDPLATFORM docker.io/library/rust:1-bookworm AS frontend-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/rust:1.95-bookworm AS frontend-builder
 
 RUN rustup target add wasm32-unknown-unknown \
  && curl -sSL https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz | tar -xz -C /usr/local/bin \
- && cargo binstall --no-confirm trunk
+ && cargo binstall --no-confirm trunk wasm-bindgen-cli
 
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
@@ -39,7 +39,7 @@ COPY frontend/style frontend/style
 RUN cd frontend && trunk build --release
 
 # ── Stage 2: build BFF binary (cross-compile via zigbuild) ──────
-FROM --platform=$BUILDPLATFORM docker.io/library/rust:1-bookworm AS bff-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/rust:1.95-bookworm AS bff-builder
 
 ARG TARGETARCH
 
