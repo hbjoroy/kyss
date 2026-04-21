@@ -18,6 +18,18 @@ pub fn SearchPage() -> impl IntoView {
     let initial_to_name = query_map.read().get("to_name").unwrap_or_default();
     let initial_from_id = query_map.read().get("from").unwrap_or_default();
     let initial_to_id = query_map.read().get("to").unwrap_or_default();
+    let trip_type_id = query_map.read().get("trip_type_id").unwrap_or_default();
+
+    let active_trip_type = {
+        let app_data = expect_context::<crate::storage::AppDataSignal>();
+        if trip_type_id.is_empty() {
+            None
+        } else {
+            app_data.data.get_untracked().trip_types.into_iter()
+                .find(|tt| tt.id == trip_type_id)
+        }
+    };
+    let active_trip_type = RwSignal::new(active_trip_type);
 
     let from_stop = RwSignal::new(if !initial_from_id.is_empty() {
         Some(Stop {
@@ -97,7 +109,7 @@ pub fn SearchPage() -> impl IntoView {
                 }
             }}
 
-            <SaveTripTypeSection from_stop=from_stop to_stop=to_stop />
+            <SaveTripTypeSection from_stop=from_stop to_stop=to_stop active_trip_type=active_trip_type />
         </div>
     }
 }
@@ -106,13 +118,14 @@ pub fn SearchPage() -> impl IntoView {
 fn SaveTripTypeSection(
     from_stop: RwSignal<Option<Stop>>,
     to_stop: RwSignal<Option<Stop>>,
+    active_trip_type: RwSignal<Option<kyss_shared::TripType>>,
 ) -> impl IntoView {
     let show_save = RwSignal::new(false);
     let trip_name = RwSignal::new(String::new());
     let trip_icon = RwSignal::new("🚌".to_string());
     let app_data = expect_context::<crate::storage::AppDataSignal>();
 
-    let save = move |_| {
+    let save_new = move |_| {
         let from = from_stop.get();
         let to = to_stop.get();
         let name = trip_name.get();
@@ -131,11 +144,42 @@ fn SaveTripTypeSection(
         }
     };
 
+    let update_existing = move |_| {
+        let from = from_stop.get();
+        let to = to_stop.get();
+        if let (Some(from), Some(to), Some(active)) = (from, to, active_trip_type.get_untracked()) {
+            app_data.data.update(|d| {
+                if let Some(existing) = d.trip_types.iter_mut().find(|t| t.id == active.id) {
+                    existing.from_stop = from;
+                    existing.to_stop = to;
+                }
+            });
+            active_trip_type.update(|att| {
+                if let Some(tt) = att {
+                    tt.from_stop = from_stop.get_untracked().unwrap();
+                    tt.to_stop = to_stop.get_untracked().unwrap();
+                }
+            });
+        }
+    };
+
     let icons = ["🚌", "🏢", "🏠", "👫", "🚶", "🎉", "🛒", "🏋️"];
 
     view! {
         <div class="save-section">
             <Show when=move || from_stop.get().is_some() && to_stop.get().is_some()>
+
+                {move || {
+                    if let Some(ref att) = active_trip_type.get() {
+                        let label = format!("Reisetype: {} {}", att.icon, att.name);
+                        view! {
+                            <p class="active-trip-type-label">{label}</p>
+                        }.into_any()
+                    } else {
+                        view! {}.into_any()
+                    }
+                }}
+
                 <Show
                     when=move || !show_save.get()
                     fallback=move || {
@@ -168,16 +212,30 @@ fn SaveTripTypeSection(
                                     }).collect_view()}
                                 </div>
                                 <div class="save-actions">
-                                    <button class="btn btn-primary" on:click=save>"Lagre"</button>
+                                    <button class="btn btn-primary" on:click=save_new>"Lagre"</button>
                                     <button class="btn btn-secondary" on:click=move |_| show_save.set(false)>"Avbryt"</button>
                                 </div>
                             </div>
                         }
                     }
                 >
-                    <button class="btn btn-secondary save-trip-btn" on:click=move |_| show_save.set(true)>
-                        "💾 Lagre som reisetype"
-                    </button>
+                    <div class="save-buttons">
+                        {move || {
+                            if let Some(ref att) = active_trip_type.get() {
+                                let name = att.name.clone();
+                                view! {
+                                    <button class="btn btn-primary save-trip-btn" on:click=update_existing>
+                                        {format!("💾 Oppdater «{}»", name)}
+                                    </button>
+                                }.into_any()
+                            } else {
+                                view! {}.into_any()
+                            }
+                        }}
+                        <button class="btn btn-secondary save-trip-btn" on:click=move |_| show_save.set(true)>
+                            "💾 Lagre som ny reisetype"
+                        </button>
+                    </div>
                 </Show>
             </Show>
         </div>

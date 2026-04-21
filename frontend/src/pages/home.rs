@@ -24,11 +24,12 @@ pub fn HomePage() -> impl IntoView {
         let navigate = navigate.clone();
         Callback::new(move |tt: TripType| {
             let url = format!(
-                "/search?from={}&to={}&from_name={}&to_name={}",
+                "/search?from={}&to={}&from_name={}&to_name={}&trip_type_id={}",
                 urlencoding::encode(&tt.from_stop.id),
                 urlencoding::encode(&tt.to_stop.id),
                 urlencoding::encode(&tt.from_stop.name),
                 urlencoding::encode(&tt.to_stop.name),
+                urlencoding::encode(&tt.id),
             );
             navigate(&url, Default::default());
         })
