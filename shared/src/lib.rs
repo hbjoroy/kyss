@@ -85,6 +85,9 @@ pub struct Leg {
     pub line: Option<LineSummary>,
     /// Human-readable destination (e.g. "Ljabru")
     pub destination: Option<String>,
+    /// EnTur service journey ID for real-time updates
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub service_journey_id: Option<String>,
     /// Intermediate stops with times (transit legs only)
     #[serde(default)]
     pub intermediate_stops: Vec<IntermediateStop>,
@@ -109,6 +112,13 @@ pub struct IntermediateStop {
     pub aimed_departure: Option<String>,
     /// ISO-8601 expected (real-time) departure
     pub expected_departure: Option<String>,
+}
+
+/// Response from the service journey real-time query.
+/// Contains updated estimated calls for all stops on the journey.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceJourneyRealtime {
+    pub estimated_calls: Vec<IntermediateStop>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

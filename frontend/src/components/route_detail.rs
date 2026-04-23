@@ -1,31 +1,120 @@
-use kyss_shared::{Leg, TransportMode, TripPattern};
+use kyss_shared::{Leg, ServiceJourneyRealtime, TransportMode, TripPattern};
 use leptos::prelude::*;
+use leptos::task::spawn_local;
+use wasm_bindgen::JsCast;
 
 #[component]
 pub fn RouteDetailView(pattern: TripPattern) -> impl IntoView {
     let now_signal = RwSignal::new(current_time_ms());
+    let legs_signal = RwSignal::new(pattern.legs);
 
-    // Tick every 30 seconds to update live progress
+    // Collect service journey IDs for polling
+    let sj_ids: Vec<(usize, String)> = legs_signal
+        .get_untracked()
+        .iter()
+        .enumerate()
+        .filter_map(|(i, leg)| leg.service_journey_id.as_ref().map(|id| (i, id.clone())))
+        .collect();
+
     Effect::new(move |_| {
         use gloo_timers::callback::Interval;
+        let sj_ids = sj_ids.clone();
+
+        // Initial real-time fetch
+        for (leg_idx, sj_id) in sj_ids.iter().cloned() {
+            let legs_signal = legs_signal;
+            spawn_local(async move {
+                if let Ok(rt) = fetch_service_journey_realtime(&sj_id).await {
+                    legs_signal.update(|legs| {
+                        if let Some(leg) = legs.get_mut(leg_idx) {
+                            update_leg_from_realtime(leg, &rt);
+                        }
+                    });
+                }
+            });
+        }
+
+        // Tick every 30 seconds: update time + fetch real-time
         let interval = Interval::new(30_000, move || {
             now_signal.set(current_time_ms());
+            for (leg_idx, sj_id) in sj_ids.clone() {
+                let legs_signal = legs_signal;
+                spawn_local(async move {
+                    if let Ok(rt) = fetch_service_journey_realtime(&sj_id).await {
+                        legs_signal.update(|legs| {
+                            if let Some(leg) = legs.get_mut(leg_idx) {
+                                update_leg_from_realtime(leg, &rt);
+                            }
+                        });
+                    }
+                });
+            }
         });
         interval.forget();
     });
 
-    let legs = pattern.legs;
-
     view! {
         <div class="route-detail">
-            {legs
-                .into_iter()
-                .map(|leg| {
-                    view! { <LegTimeline leg=leg now=now_signal /> }
-                })
-                .collect_view()}
+            {move || {
+                legs_signal
+                    .get()
+                    .into_iter()
+                    .map(|leg| {
+                        view! { <LegTimeline leg=leg now=now_signal /> }
+                    })
+                    .collect_view()
+            }}
         </div>
     }
+}
+
+/// Match real-time estimated calls back to our leg's stops by name.
+fn update_leg_from_realtime(leg: &mut Leg, rt: &ServiceJourneyRealtime) {
+    // Find departure stop (from_name) and arrival stop (to_name) in real-time data
+    for call in &rt.estimated_calls {
+        if call.name == leg.from_name {
+            if let Some(ref t) = call.expected_departure {
+                leg.expected_start = t.clone();
+            }
+        }
+        if call.name == leg.to_name {
+            if let Some(ref t) = call.expected_arrival {
+                leg.expected_end = t.clone();
+            }
+        }
+    }
+
+    // Update intermediate stops
+    for stop in &mut leg.intermediate_stops {
+        if let Some(call) = rt.estimated_calls.iter().find(|c| c.name == stop.name) {
+            stop.expected_arrival = call.expected_arrival.clone();
+            stop.expected_departure = call.expected_departure.clone();
+        }
+    }
+}
+
+async fn fetch_service_journey_realtime(
+    sj_id: &str,
+) -> Result<ServiceJourneyRealtime, String> {
+    let window = web_sys::window().unwrap();
+    let url = format!("/api/service-journey/{}", urlencoding::encode(sj_id));
+
+    let request = web_sys::Request::new_with_str(&url)
+        .map_err(|e| format!("{:?}", e))?;
+
+    let resp = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .map_err(|e| format!("{:?}", e))?;
+    let resp: web_sys::Response = resp.dyn_into().map_err(|e| format!("{:?}", e))?;
+
+    if !resp.ok() {
+        return Err("Service journey fetch failed".to_string());
+    }
+
+    let json = wasm_bindgen_futures::JsFuture::from(resp.json().unwrap())
+        .await
+        .map_err(|e| format!("{:?}", e))?;
+    serde_wasm_bindgen::from_value(json).map_err(|e| format!("{:?}", e))
 }
 
 #[component]
@@ -62,7 +151,6 @@ fn LegTimeline(leg: Leg, now: RwSignal<f64>) -> impl IntoView {
 
     let mode_icon = leg.mode.to_string();
 
-    // Build the full stop list: origin + intermediate + destination
     let from_name = leg.from_name.clone();
     let to_name = leg.to_name.clone();
     let dep_time = leg.expected_start.clone();
@@ -70,7 +158,7 @@ fn LegTimeline(leg: Leg, now: RwSignal<f64>) -> impl IntoView {
     let aimed_dep = leg.aimed_start.clone();
     let aimed_arr = leg.aimed_end.clone();
     let intermediate = leg.intermediate_stops;
-    let stop_count = intermediate.len() + 2; // origin + intermediate + destination
+    let stop_count = intermediate.len() + 2;
 
     view! {
         <div class="timeline-leg">
@@ -80,7 +168,6 @@ fn LegTimeline(leg: Leg, now: RwSignal<f64>) -> impl IntoView {
                 <span class="timeline-stop-count">{stop_count}" stopp"</span>
             </div>
             <div class="timeline-stops">
-                // Origin stop
                 {
                     let dep = dep_time.clone();
                     let aimed = aimed_dep.clone();
@@ -97,11 +184,14 @@ fn LegTimeline(leg: Leg, now: RwSignal<f64>) -> impl IntoView {
                     }
                 }
 
-                // Intermediate stops
                 {intermediate
                     .into_iter()
                     .map(|stop| {
-                        let time = stop.expected_arrival.clone().or(stop.aimed_arrival.clone()).unwrap_or_default();
+                        let time = stop
+                            .expected_arrival
+                            .clone()
+                            .or(stop.aimed_arrival.clone())
+                            .unwrap_or_default();
                         let aimed = stop.aimed_arrival.clone();
                         let name = stop.name.clone();
                         view! {
@@ -117,7 +207,6 @@ fn LegTimeline(leg: Leg, now: RwSignal<f64>) -> impl IntoView {
                     })
                     .collect_view()}
 
-                // Destination stop
                 {
                     let arr = arr_time.clone();
                     let aimed = aimed_arr.clone();
@@ -151,10 +240,7 @@ fn TimelineStop(
     let time_ms = parse_iso_ms(&time);
     let time_display = format_time(&time);
 
-    let delayed = aimed_time
-        .as_ref()
-        .map(|a| a != &time)
-        .unwrap_or(false);
+    let delayed = aimed_time.as_ref().map(|a| a != &time).unwrap_or(false);
     let aimed_display = if delayed {
         aimed_time.as_ref().map(|t| format_time(t))
     } else {
@@ -208,11 +294,9 @@ fn format_time(iso: &str) -> String {
 }
 
 fn parse_iso_ms(iso: &str) -> f64 {
-    // Parse ISO-8601 to epoch millis for comparison with JS Date.now()
     if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(iso) {
         dt.timestamp_millis() as f64
-    } else if let Some(_t_idx) = iso.find('T') {
-        // Try parsing with offset like +02:00
+    } else if iso.find('T').is_some() {
         let s = iso.trim();
         chrono::DateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S%:z")
             .or_else(|_| chrono::DateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S%.f%:z"))

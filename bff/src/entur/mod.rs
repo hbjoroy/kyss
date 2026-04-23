@@ -1,5 +1,6 @@
 pub mod geocoder;
 pub mod journey;
+pub mod service_journey;
 
 use reqwest::Client;
 

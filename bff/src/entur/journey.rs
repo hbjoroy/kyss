@@ -39,6 +39,9 @@ query Trip($from: Location!, $to: Location!, $dateTime: DateTime, $numTripPatter
           publicCode
           name
         }
+        serviceJourney {
+          id
+        }
         fromEstimatedCall {
           destinationDisplay {
             frontText
@@ -128,6 +131,7 @@ struct RawLeg {
     aimed_start_time: Option<String>,
     aimed_end_time: Option<String>,
     line: Option<RawLine>,
+    service_journey: Option<RawServiceJourney>,
     from_estimated_call: Option<RawEstimatedCall>,
     intermediate_estimated_calls: Option<Vec<RawIntermediateCall>>,
 }
@@ -151,6 +155,11 @@ struct RawLine {
     id: String,
     public_code: String,
     name: String,
+}
+
+#[derive(Deserialize)]
+struct RawServiceJourney {
+    id: String,
 }
 
 #[derive(Deserialize)]
@@ -267,6 +276,7 @@ impl EnturClient {
                         destination: leg.from_estimated_call
                             .and_then(|ec| ec.destination_display)
                             .map(|d| d.front_text),
+                        service_journey_id: leg.service_journey.map(|sj| sj.id),
                         intermediate_stops: leg
                             .intermediate_estimated_calls
                             .unwrap_or_default()
