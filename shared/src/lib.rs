@@ -85,6 +85,9 @@ pub struct Leg {
     pub line: Option<LineSummary>,
     /// Human-readable destination (e.g. "Ljabru")
     pub destination: Option<String>,
+    /// Intermediate stops with times (transit legs only)
+    #[serde(default)]
+    pub intermediate_stops: Vec<IntermediateStop>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -92,6 +95,20 @@ pub struct LineSummary {
     pub id: String,
     pub public_code: String,
     pub name: String,
+}
+
+/// An intermediate stop along a transit leg with arrival/departure times.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct IntermediateStop {
+    pub name: String,
+    /// ISO-8601 aimed (scheduled) arrival
+    pub aimed_arrival: Option<String>,
+    /// ISO-8601 expected (real-time) arrival
+    pub expected_arrival: Option<String>,
+    /// ISO-8601 aimed (scheduled) departure
+    pub aimed_departure: Option<String>,
+    /// ISO-8601 expected (real-time) departure
+    pub expected_departure: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

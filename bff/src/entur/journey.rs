@@ -1,5 +1,5 @@
 use super::{EnturClient, ET_CLIENT_NAME};
-use kyss_shared::{JourneyResult, Leg, LineSummary, TransportMode, TripPattern};
+use kyss_shared::{IntermediateStop, JourneyResult, Leg, LineSummary, TransportMode, TripPattern};
 use serde::{Deserialize, Serialize};
 
 const JOURNEY_PLANNER_URL: &str = "https://api.entur.io/journey-planner/v3/graphql";
@@ -43,6 +43,17 @@ query Trip($from: Location!, $to: Location!, $dateTime: DateTime, $numTripPatter
           destinationDisplay {
             frontText
           }
+        }
+        intermediateEstimatedCalls {
+          quay {
+            stopPlace {
+              name
+            }
+          }
+          aimedArrivalTime
+          expectedArrivalTime
+          aimedDepartureTime
+          expectedDepartureTime
         }
       }
     }
@@ -118,6 +129,7 @@ struct RawLeg {
     aimed_end_time: Option<String>,
     line: Option<RawLine>,
     from_estimated_call: Option<RawEstimatedCall>,
+    intermediate_estimated_calls: Option<Vec<RawIntermediateCall>>,
 }
 
 #[derive(Deserialize)]
@@ -145,6 +157,27 @@ struct RawLine {
 #[serde(rename_all = "camelCase")]
 struct RawDestination {
     front_text: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawIntermediateCall {
+    quay: RawQuay,
+    aimed_arrival_time: Option<String>,
+    expected_arrival_time: Option<String>,
+    aimed_departure_time: Option<String>,
+    expected_departure_time: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawQuay {
+    stop_place: RawStopPlace,
+}
+
+#[derive(Deserialize)]
+struct RawStopPlace {
+    name: String,
 }
 
 fn parse_mode(s: &str) -> TransportMode {
@@ -234,6 +267,18 @@ impl EnturClient {
                         destination: leg.from_estimated_call
                             .and_then(|ec| ec.destination_display)
                             .map(|d| d.front_text),
+                        intermediate_stops: leg
+                            .intermediate_estimated_calls
+                            .unwrap_or_default()
+                            .into_iter()
+                            .map(|ic| IntermediateStop {
+                                name: ic.quay.stop_place.name,
+                                aimed_arrival: ic.aimed_arrival_time,
+                                expected_arrival: ic.expected_arrival_time,
+                                aimed_departure: ic.aimed_departure_time,
+                                expected_departure: ic.expected_departure_time,
+                            })
+                            .collect(),
                     })
                     .collect(),
             })

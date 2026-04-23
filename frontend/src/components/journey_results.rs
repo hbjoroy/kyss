@@ -1,3 +1,4 @@
+use crate::components::route_detail::RouteDetailView;
 use kyss_shared::{JourneyResult, Leg, TripPattern};
 use leptos::prelude::*;
 
@@ -32,11 +33,22 @@ fn TripPatternCard(pattern: TripPattern) -> impl IntoView {
     let start = format_time(&pattern.start_time);
     let end = format_time(&pattern.end_time);
 
+    let expanded = RwSignal::new(false);
+
+    // Clone pattern for the detail view (only rendered when expanded)
+    let pattern_for_detail = StoredValue::new(pattern.clone());
+
     view! {
-        <div class="trip-pattern">
-            <div class="trip-header">
+        <div class="trip-pattern" class:trip-pattern--expanded=move || expanded.get()>
+            <div
+                class="trip-header trip-header--clickable"
+                on:click=move |_| expanded.update(|e| *e = !*e)
+            >
                 <span class="trip-times">{start}" → "{end}</span>
-                <span class="trip-duration">{duration_mins}" min"</span>
+                <div class="trip-header-right">
+                    <span class="trip-duration">{duration_mins}" min"</span>
+                    <span class="trip-expand-icon">{move || if expanded.get() { "▲" } else { "▼" }}</span>
+                </div>
             </div>
             <div class="trip-legs">
                 {pattern
@@ -47,6 +59,18 @@ fn TripPatternCard(pattern: TripPattern) -> impl IntoView {
                     })
                     .collect_view()}
             </div>
+            {move || {
+                if expanded.get() {
+                    let p = pattern_for_detail.get_value();
+                    Some(view! {
+                        <div class="trip-detail-section">
+                            <RouteDetailView pattern=p />
+                        </div>
+                    })
+                } else {
+                    None
+                }
+            }}
         </div>
     }
 }
