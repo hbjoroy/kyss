@@ -108,8 +108,8 @@ pub fn SearchPage() -> impl IntoView {
             <div class="search-form">
                 <div class="stop-fields">
                     <div class="stop-fields-inputs">
-                        <StopSearch label="Fra" on_select=on_from_select display_value=from_display />
-                        <StopSearch label="Til" on_select=on_to_select display_value=to_display />
+                        <StopSearch label="Fra" on_select=on_from_select display_value=from_display opposite_stop=to_stop />
+                        <StopSearch label="Til" on_select=on_to_select display_value=to_display opposite_stop=from_stop />
                     </div>
                     <button
                         class="swap-btn"

@@ -223,6 +223,9 @@ pub struct AppData {
     pub time_periods: Vec<TimePeriod>,
     #[serde(default = "default_min_transfer")]
     pub min_transfer_minutes: u32,
+    /// Recently selected stops (most recent first, max 10)
+    #[serde(default)]
+    pub recent_stops: Vec<Stop>,
 }
 
 fn default_min_transfer() -> u32 {
@@ -236,6 +239,7 @@ impl Default for AppData {
             trip_types: Vec::new(),
             time_periods: TimePeriod::defaults(),
             min_transfer_minutes: DEFAULT_MIN_TRANSFER_MINUTES,
+            recent_stops: Vec::new(),
         }
     }
 }

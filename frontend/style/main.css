@@ -236,6 +236,17 @@ main {
     background: var(--bg);
 }
 
+.suggestion-item--recent {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.recent-icon {
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+
 .stop-name {
     font-weight: 500;
 }

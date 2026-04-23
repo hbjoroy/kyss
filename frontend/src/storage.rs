@@ -1,8 +1,9 @@
-use kyss_shared::AppData;
+use kyss_shared::{AppData, Stop};
 use leptos::prelude::*;
 use web_sys::window;
 
 const STORAGE_KEY: &str = "kyss.data";
+const MAX_RECENT_STOPS: usize = 10;
 
 #[derive(Clone, Copy)]
 pub struct AppDataSignal {
@@ -21,6 +22,15 @@ impl AppDataSignal {
         });
 
         Self { data }
+    }
+
+    /// Add a stop to the recent stops cache (move to top if already present, cap at 10).
+    pub fn push_recent_stop(&self, stop: &Stop) {
+        self.data.update(|d| {
+            d.recent_stops.retain(|s| s.id != stop.id);
+            d.recent_stops.insert(0, stop.clone());
+            d.recent_stops.truncate(MAX_RECENT_STOPS);
+        });
     }
 }
 
