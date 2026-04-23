@@ -1,4 +1,5 @@
 use crate::components::route_detail::RouteDetailView;
+use crate::components::trip_detail_view::FullTripViewSignal;
 use kyss_shared::{JourneyResult, Leg, TripPattern};
 use leptos::prelude::*;
 
@@ -34,23 +35,36 @@ fn TripPatternCard(pattern: TripPattern) -> impl IntoView {
     let end = format_time(&pattern.end_time);
 
     let expanded = RwSignal::new(false);
+    let full_trip = expect_context::<FullTripViewSignal>();
 
     // Clone pattern for the detail view (only rendered when expanded)
     let pattern_for_detail = StoredValue::new(pattern.clone());
+    let pattern_for_full = StoredValue::new(pattern.clone());
 
     view! {
         <div class="trip-pattern" class:trip-pattern--expanded=move || expanded.get()>
-            <div
-                class="trip-header trip-header--clickable"
-                on:click=move |_| expanded.update(|e| *e = !*e)
-            >
-                <span class="trip-times">{start}" → "{end}</span>
+            <div class="trip-header trip-header--clickable">
+                <span class="trip-times" on:click=move |_| expanded.update(|e| *e = !*e)>
+                    {start}" → "{end}
+                </span>
                 <div class="trip-header-right">
                     <span class="trip-duration">{duration_mins}" min"</span>
-                    <span class="trip-expand-icon">{move || if expanded.get() { "▲" } else { "▼" }}</span>
+                    <button
+                        class="trip-fullview-btn"
+                        on:click=move |_| full_trip.0.set(Some(pattern_for_full.get_value()))
+                        title="Åpne fullvisning"
+                    >
+                        "⛶"
+                    </button>
+                    <span
+                        class="trip-expand-icon"
+                        on:click=move |_| expanded.update(|e| *e = !*e)
+                    >
+                        {move || if expanded.get() { "▲" } else { "▼" }}
+                    </span>
                 </div>
             </div>
-            <div class="trip-legs">
+            <div class="trip-legs" on:click=move |_| expanded.update(|e| *e = !*e)>
                 {pattern
                     .legs
                     .into_iter()
